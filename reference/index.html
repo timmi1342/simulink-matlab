@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Сверка с эталонной моделью</title>
+<style>
+  :root { color-scheme: light dark; --bg: #fcfcfb; --text: #0b0b0b; --muted: #52514e; --line: #e1e0d9; --ok: #006300; --fail: #b42323; --accent: #2a78d6; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #1a1a19; --text: #fff; --muted: #c3c2b7; --line: #2c2c2a; --ok: #0ca30c; --fail: #e66767; --accent: #3987e5; } }
+  body { margin: 0; padding: 24px 16px; background: var(--bg); color: var(--text); font: 14px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  main { max-width: 1180px; margin: 0 auto; }
+  h1 { font-size: 18px; margin: 0 0 6px; }
+  p { margin: 6px 0; color: var(--muted); max-width: 900px; }
+  .bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 14px 0; }
+  button { padding: 7px 14px; border-radius: 7px; border: 1px solid var(--accent); background: var(--accent); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+  button:disabled { opacity: 0.5; cursor: wait; }
+  #summary { font-weight: 600; margin: 10px 0; }
+  .wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  td, th { padding: 6px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+  th { color: var(--muted); font-size: 12px; white-space: nowrap; }
+  .ok { color: var(--ok); font-weight: 700; }
+  .fail { color: var(--fail); font-weight: 700; }
+  .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .detail, .muted { color: var(--muted); }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Сверка вычислительного ядра с эталонной моделью на Python/NumPy</h1>
+  <p>Эталонная модель <a href="model.py">model.py</a> — независимая реализация того же тракта: модель фазовращателя,
+    модель погрешностей, приёмник, расчёт параметров. Генератор псевдослучайных чисел и порядок арифметических
+    операций повторены, поэтому результаты сравниваются поразрядно. Режимы сверки заданы в файле <a href="cases.json">cases.json</a>.</p>
+  <p id="defaults" class="muted"></p>
+  <p id="jsTime" class="muted"></p>
+  <div class="bar">
+    <button id="pyBtn" type="button">Запустить эталонную модель в браузере</button>
+    <span id="pyStatus" class="muted">Python и NumPy загружаются в браузер через Pyodide (около 15 МБ, один раз).</span>
+  </div>
+  <div id="summary">Сохранённые результаты эталонной модели не найдены — запустите её кнопкой выше или командой <code>python model.py --json</code>.</div>
+  <p id="engine" class="muted"></p>
+  <div class="wrap">
+    <table>
+      <thead>
+        <tr><th>Итог</th><th>Режим</th><th>Значений</th><th>Макс. абс. расхождение</th><th>Макс. отн. расхождение</th>
+          <th>Где наибольшее</th><th>СКО ошибки, веб</th><th>СКО ошибки, Python</th></tr>
+      </thead>
+      <tbody id="out"></tbody>
+    </table>
+  </div>
+  <p><a href="../">Вернуться к программе</a> · <a href="../tests/">самотест ядра</a></p>
+</main>
+<script type="module" src="compare.js"></script>
+</body>
+</html>

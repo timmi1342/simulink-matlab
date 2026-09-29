@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PhaseShifter Lab — моделирование системы измерения параметров фазовращателей</title>
+<meta name="description" content="Модель автоматизированной системы измерения параметров цифровых фазовращателей: объект измерения, векторный измерительный тракт с погрешностями, бюджет неопределённости, сравнение методов измерения фазы, применение в ФАР.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%232a78d6'/><circle cx='16' cy='16' r='9' fill='none' stroke='white' stroke-width='2.2'/><path d='M16 16 L23 11' stroke='white' stroke-width='2.6' stroke-linecap='round'/></svg>">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <strong>PhaseShifter Lab</strong>
+      <span>моделирование и исследование системы измерения параметров фазовращателей</span>
+    </div>
+    <label for="preset">Режим</label>
+    <select id="preset"></select>
+    <button class="btn" id="themeBtn" type="button">Тёмная тема</button>
+    <button class="btn" id="reportBtn" type="button">Протокол PDF</button>
+    <button class="btn btn-primary" id="runBtn" type="button">Рассчитать</button>
+    <span class="status" id="status"></span>
+  </header>
+
+  <aside class="sidebar" id="sidebar">
+
+    <details class="group" data-tabs="stand mc array" open>
+      <summary>Объект измерения — фазовращатель</summary>
+      <div class="group-body">
+        <div class="row2">
+          <div class="field">
+            <label for="bits">Число разрядов</label>
+            <select id="bits" data-bind="dut.bits" data-kind="int">
+              <option value="2">2</option><option value="3">3</option><option value="4">4</option>
+              <option value="5">5</option><option value="6">6</option>
+            </select>
+            <div class="error"></div>
+          </div>
+          <div class="field">
+            <label for="f0">Расчётная частота, ГГц</label>
+            <input type="number" id="f0" data-bind="dut.f0" data-scale="1e9" step="0.1">
+            <div class="error"></div>
+          </div>
+        </div>
+        <div class="field">
+          <label for="topology">Схема построения разрядов</label>
+          <select id="topology" data-bind="dut.topology" data-kind="string"></select>
+          <div class="hint" id="topologyHint"></div>
+        </div>
+        <div class="field">
+          <label>Сопротивление открытого ключа Ron, Ом</label>
+          <div class="slider">
+            <input type="range" data-bind="dut.ron" min="0" max="10" step="0.1">
+            <input type="number" data-bind="dut.ron" step="0.1">
+          </div>
+          <div class="error"></div>
+        </div>
+        <div class="field">
+          <label>Ёмкость закрытого ключа Coff, фФ</label>
+          <div class="slider">
+            <input type="range" data-bind="dut.coffFf" min="0" max="100" step="1">
+            <input type="number" data-bind="dut.coffFf" step="1">
+          </div>
+          <div class="error"></div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="qL">Добротность L</label>
+            <input type="number" id="qL" data-bind="dut.qL" step="1">
+            <div class="error"></div>
+          </div>
+          <div class="field">
+            <label for="qC">Добротность C</label>
+            <input type="number" id="qC" data-bind="dut.qC" step="1">
+            <div class="error"></div>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="lineLoss">Потери в линиях, дБ/λ</label>
+            <input type="number" id="lineLoss" data-bind="dut.lineLossDb" step="0.05">
+            <div class="error"></div>
+          </div>
+          <div class="field">
+            <label for="instance">Номер экземпляра</label>
+            <input type="number" id="instance" data-bind="dut.instance" data-kind="int" step="1">
+            <div class="error"></div>
+          </div>
+        </div>
+        <div class="field">
+          <label>Технологический разброс номиналов, %</label>
+          <div class="slider">
+            <input type="range" data-bind="dut.tolPct" min="0" max="5" step="0.1">
+            <input type="number" data-bind="dut.tolPct" step="0.1">
+          </div>
+          <div class="error"></div>
+        </div>
+      </div>
+    </details>
+
+    <details class="group" data-tabs="stand mc array" open>
+      <summary>Измерительная система</summary>
+      <div class="group-body">
+        <div class="field">
+          <label>Мощность генератора, дБм</label>
+          <div class="slider">
+            <input type="range" data-bind="sys.powerDbm" min="-90" max="10" step="1">
+            <input type="number" data-bind="sys.powerDbm" step="1">
+          </div>
+          <div class="error"></div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="ifbw">Полоса ПЧ, Гц</label>
+            <select id="ifbw" data-bind="sys.ifbwHz" data-kind="num">
+              <option value="1">1</option><option value="10">10</option><option value="100">100</option>
+              <option value="1000">1 000</option><option value="10000">10 000</option><option value="100000">100 000</option>
+            </select>
+            <div class="error"></div>
+          </div>
+          <div class="field">
+            <label for="nf">Коэфф. шума, дБ</label>
+            <input type="number" id="nf" data-bind="sys.nfDb" step="1">
+            <div class="error"></div>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="recLen">Запись ПЧ, отсчётов</label>
+            <select id="recLen" data-bind="sys.recordLen" data-kind="int">
+              <option value="32">32</option><option value="64">64</option><option value="128">128</option>
+              <option value="256">256</option><option value="512">512</option><option value="1024">1024</option>
+            </select>
+            <div class="error"></div>
+          </div>
+          <div class="field">
+            <label for="adcBits">Разрядность АЦП</label>
+            <input type="number" id="adcBits" data-bind="sys.adcBits" data-kind="int" step="1">
+            <div class="error"></div>
+          </div>
+        </div>
+        <div class="field">
+          <label for="cal">Калибровка тракта</label>
+          <select id="cal" data-bind="sys.cal" data-kind="string"></select>
+        </div>
+        <div class="field">
+          <label for="strategy">Порядок измерения состояний</label>
+          <select id="strategy" data-bind="sys.strategy" data-kind="string"></select>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="driftDeg">Дрейф фазы, °/мин</label>
+            <input type="number" id="driftDeg" data-bind="sys.driftDegMin" step="0.01">
+            <div class="error"></div>
+          </div>
+          <div class="field">
+            <label for="driftDb">Дрейф ампл., дБ/мин</label>
+            <input type="number" id="driftDb" data-bind="sys.driftDbMin" step="0.001">
+            <div class="error"></div>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="settle">Установление точки, мкс</label>
+            <input type="number" id="settle" data-bind="sys.settleUs" step="1">
+            <div class="error"></div>
+          </div>
+          <div class="field">
+            <label for="switchMs">Смена состояния, мс</label>
+            <input type="number" id="switchMs" data-bind="sys.switchMs" step="0.1">
+            <div class="error"></div>
+          </div>
+        </div>
+        <div class="field">
+          <label for="seed">Зерно генератора случайных чисел</label>
+          <input type="number" id="seed" data-bind="sys.seed" data-kind="int" step="1">
+          <div class="error"></div>
+        </div>
+
+        <details class="sub">
+          <summary>Учитываемые источники погрешности</summary>
+          <label class="switch"><input type="checkbox" data-bind="sys.sources.noise" data-kind="bool"> Тепловой шум приёмника</label>
+          <label class="switch"><input type="checkbox" data-bind="sys.sources.quant" data-kind="bool"> Квантование АЦП</label>
+          <label class="switch"><input type="checkbox" data-bind="sys.sources.mismatch" data-kind="bool"> Рассогласование портов</label>
+          <label class="switch"><input type="checkbox" data-bind="sys.sources.leakage" data-kind="bool"> Направленность и утечка</label>
+          <label class="switch"><input type="checkbox" data-bind="sys.sources.tracking" data-kind="bool"> Неидеальность передачи тракта</label>
+          <label class="switch"><input type="checkbox" data-bind="sys.sources.drift" data-kind="bool"> Дрейф во времени</label>
+        </details>
+
+        <details class="sub">
+          <summary>Остаточные погрешности после калибровки</summary>
+          <div class="row2">
+            <div class="field"><label>Согласование источника, дБ</label><input type="number" data-bind="sys.res.esfDb" step="1"><div class="error"></div></div>
+            <div class="field"><label>Согласование нагрузки, дБ</label><input type="number" data-bind="sys.res.elfDb" step="1"><div class="error"></div></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>Направленность, дБ</label><input type="number" data-bind="sys.res.edfDb" step="1"><div class="error"></div></div>
+            <div class="field"><label>Перекрёстная утечка, дБ</label><input type="number" data-bind="sys.res.exfDb" step="1"><div class="error"></div></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>Передача, ± дБ</label><input type="number" data-bind="sys.res.trackDb" step="0.01"><div class="error"></div></div>
+            <div class="field"><label>Передача, ± градусы</label><input type="number" data-bind="sys.res.trackDeg" step="0.05"><div class="error"></div></div>
+          </div>
+        </details>
+
+        <details class="sub">
+          <summary>Погрешности тракта до калибровки</summary>
+          <div class="row2">
+            <div class="field"><label>Согласование источника, дБ</label><input type="number" data-bind="sys.raw.esfDb" step="1"><div class="error"></div></div>
+            <div class="field"><label>Согласование нагрузки, дБ</label><input type="number" data-bind="sys.raw.elfDb" step="1"><div class="error"></div></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>Направленность, дБ</label><input type="number" data-bind="sys.raw.edfDb" step="1"><div class="error"></div></div>
+            <div class="field"><label>Перекрёстная утечка, дБ</label><input type="number" data-bind="sys.raw.exfDb" step="1"><div class="error"></div></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>Потери кабелей, дБ</label><input type="number" data-bind="sys.raw.cableLossDb" step="0.5"><div class="error"></div></div>
+            <div class="field"><label>Задержка кабелей, нс</label><input type="number" data-bind="sys.raw.cableDelayNs" step="0.1"><div class="error"></div></div>
+          </div>
+        </details>
+      </div>
+    </details>
+
+    <details class="group" data-tabs="stand mc" open>
+      <summary>Диапазон частот и анализ</summary>
+      <div class="group-body">
+        <div class="row3">
+          <div class="field"><label>Начало, ГГц</label><input type="number" data-bind="sweep.start" data-scale="1e9" step="0.1"><div class="error"></div></div>
+          <div class="field"><label>Конец, ГГц</label><input type="number" data-bind="sweep.stop" data-scale="1e9" step="0.1"><div class="error"></div></div>
+          <div class="field"><label>Точек</label><input type="number" data-bind="sweep.points" data-kind="int" step="10"><div class="error"></div></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Рабочая полоса от, ГГц</label><input type="number" data-bind="sweep.bandLo" data-scale="1e9" step="0.1"><div class="error"></div></div>
+          <div class="field"><label>до, ГГц</label><input type="number" data-bind="sweep.bandHi" data-scale="1e9" step="0.1"><div class="error"></div></div>
+        </div>
+        <div class="field">
+          <label>Частота анализа, ГГц</label>
+          <div class="slider">
+            <input type="range" id="analysisRange" data-bind="sweep.analysisHz" data-scale="1e9" step="0.05">
+            <input type="number" data-bind="sweep.analysisHz" data-scale="1e9" step="0.05">
+          </div>
+          <div class="error"></div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="scopeState">Состояние для записи ПЧ</label>
+            <input type="number" id="scopeState" data-bind="sweep.scopeState" data-kind="int" step="1">
+            <div class="error"></div>
+          </div>
+          <div class="field">
+            <label for="polarGain">Увеличение отклонений</label>
+            <select id="polarGain" data-bind="sweep.polarGain" data-kind="num">
+              <option value="1">×1</option><option value="2">×2</option><option value="5">×5</option>
+              <option value="10">×10</option><option value="20">×20</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <details class="group" data-tabs="stand">
+      <summary>Нормы на параметры</summary>
+      <div class="group-body">
+        <div class="row2">
+          <div class="field"><label>СКО фазовой ошибки, °</label><input type="number" data-bind="limits.rmsPhaseDeg" step="0.5"><div class="error"></div></div>
+          <div class="field"><label>Пиковая ошибка, °</label><input type="number" data-bind="limits.peakPhaseDeg" step="0.5"><div class="error"></div></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>СКО амплитуды, дБ</label><input type="number" data-bind="limits.rmsAmpDb" step="0.05"><div class="error"></div></div>
+          <div class="field"><label>Потери, не более дБ</label><input type="number" data-bind="limits.ilMaxDb" step="0.5"><div class="error"></div></div>
+        </div>
+        <div class="field"><label>КСВН входа, не более</label><input type="number" data-bind="limits.vswrMax" step="0.1"><div class="error"></div></div>
+      </div>
+    </details>
+
+    <details class="group" data-tabs="mc" open>
+      <summary>Моделирование Монте-Карло</summary>
+      <div class="group-body">
+        <div class="row2">
+          <div class="field"><label>Число прогонов</label><input type="number" data-bind="mc.runs" data-kind="int" step="10"><div class="error"></div></div>
+          <div class="field"><label>Частот в полосе</label><input type="number" data-bind="mc.freqPoints" data-kind="int" step="1"><div class="error"></div></div>
+        </div>
+        <div class="hint">В каждом прогоне меняются реализации шума, фазы остаточных погрешностей и скорость дрейфа; объект измерения один и тот же.</div>
+      </div>
+    </details>
+
+    <details class="group" data-tabs="methods" open>
+      <summary>Эксперимент со сравнением методов</summary>
+      <div class="group-body">
+        <div class="row2">
+          <div class="field"><label>Длина записи, отсчётов</label><input type="number" data-bind="methods.recordLen" data-kind="int" step="32"><div class="error"></div></div>
+          <div class="field"><label>Периодов в записи</label><input type="number" data-bind="methods.cycles" step="0.01"><div class="error"></div></div>
+        </div>
+        <div class="row3">
+          <div class="field"><label>ОСШ от, дБ</label><input type="number" data-bind="methods.snrMin" step="5"><div class="error"></div></div>
+          <div class="field"><label>до, дБ</label><input type="number" data-bind="methods.snrMax" step="5"><div class="error"></div></div>
+          <div class="field"><label>шаг, дБ</label><input type="number" data-bind="methods.snrStep" step="1"><div class="error"></div></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Испытаний на точку</label><input type="number" data-bind="methods.trials" data-kind="int" step="50"><div class="error"></div></div>
+          <div class="field"><label>Разность фаз Δφ, °</label><input type="number" data-bind="methods.deltaDeg" step="5"><div class="error"></div></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Уровень изм. сигнала, дБ</label><input type="number" data-bind="methods.ratioDb" step="1"><div class="error"></div></div>
+          <div class="field"><label>Разрядность АЦП</label><input type="number" data-bind="methods.adcBits" data-kind="int" step="1"><div class="error"></div></div>
+        </div>
+        <div class="field">
+          <label for="window">Окно при ДПФ</label>
+          <select id="window" data-bind="methods.window" data-kind="string">
+            <option value="rect">прямоугольное</option>
+            <option value="hann">Ханна</option>
+          </select>
+        </div>
+        <label class="switch"><input type="checkbox" data-bind="methods.harmonicOn" data-kind="bool"> Гармоника в сигнале генератора</label>
+        <div class="row2">
+          <div class="field"><label>Уровень гармоники, дБн</label><input type="number" data-bind="methods.harmonicDbc" step="5"><div class="error"></div></div>
+          <div class="field"><label>Номер гармоники</label><input type="number" data-bind="methods.harmonicOrder" data-kind="int" step="1"><div class="error"></div></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Дисбаланс I/Q, дБ</label><input type="number" data-bind="methods.iqGainDb" step="0.1"><div class="error"></div></div>
+          <div class="field"><label>Ошибка квадратуры, °</label><input type="number" data-bind="methods.iqPhaseDeg" step="0.5"><div class="error"></div></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Ошибка фаз шестиполюсника, °</label><input type="number" data-bind="methods.spErrDeg" step="0.5"><div class="error"></div></div>
+          <div class="field"><label>Нелинейность детекторов</label><input type="number" data-bind="methods.spComp" step="0.01"><div class="error"></div></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>ОСШ для кривых смещения, дБ</label><input type="number" data-bind="methods.biasSnrDb" step="5"><div class="error"></div></div>
+          <div class="field"><label>ОСШ для таблицы, дБ</label><input type="number" data-bind="methods.tableSnrDb" step="5"><div class="error"></div></div>
+        </div>
+        <div class="field"><label>Зерно генератора</label><input type="number" data-bind="methods.seed" data-kind="int" step="1"><div class="error"></div></div>
+      </div>
+    </details>
+
+    <details class="group" data-tabs="array" open>
+      <summary>Фазированная антенная решётка</summary>
+      <div class="group-body">
+        <div class="row2">
+          <div class="field"><label>Число элементов</label><input type="number" data-bind="array.elements" data-kind="int" step="1"><div class="error"></div></div>
+          <div class="field"><label>Шаг решётки, λ0</label><input type="number" data-bind="array.spacing" step="0.05"><div class="error"></div></div>
+        </div>
+        <div class="field">
+          <label>Угол сканирования, °</label>
+          <div class="slider">
+            <input type="range" data-bind="array.steerDeg" min="-60" max="60" step="0.5">
+            <input type="number" data-bind="array.steerDeg" step="0.5">
+          </div>
+          <div class="error"></div>
+        </div>
+        <div class="field">
+          <label>Рабочая частота решётки, ГГц</label>
+          <input type="number" data-bind="array.freqHz" data-scale="1e9" step="0.1">
+          <div class="error"></div>
+        </div>
+        <div class="field">
+          <label for="taper">Амплитудное распределение</label>
+          <select id="taper" data-bind="array.taper" data-kind="string"></select>
+        </div>
+        <div class="field">
+          <label>Пьедестал распределения</label>
+          <div class="slider">
+            <input type="range" data-bind="array.pedestal" min="0" max="1" step="0.05">
+            <input type="number" data-bind="array.pedestal" step="0.05">
+          </div>
+          <div class="error"></div>
+        </div>
+        <div class="hint">Элемент n питается через экземпляр фазовращателя с номером «номер экземпляра + n». Таблица калибровки строится по результатам измерения каждого экземпляра на заданной измерительной системе.</div>
+      </div>
+    </details>
+
+    <details class="group">
+      <summary>Экспорт</summary>
+      <div class="group-body">
+        <button class="btn wide" id="exportPdf" type="button">Графики вкладки в PDF</button>
+        <button class="btn wide" id="exportCsv" type="button">Данные вкладки в CSV</button>
+        <label class="switch"><input type="checkbox" id="lightExport" checked> Рисунки всегда в светлой теме</label>
+        <div class="hint">Кнопка PNG появляется на каждом графике при наведении. Рисунки сохраняются с разрешением 1904 × 1120 точек — подходят для вставки в пояснительную записку.</div>
+      </div>
+    </details>
+
+    <details class="group">
+      <summary>Настройки</summary>
+      <div class="group-body">
+        <label class="switch"><input type="checkbox" id="autoRun" checked> Пересчёт при изменении параметров</label>
+        <button class="btn wide" id="saveCfg" type="button">Сохранить конфигурацию</button>
+        <button class="btn wide" id="loadCfgBtn" type="button">Загрузить конфигурацию</button>
+        <input type="file" id="loadCfg" accept="application/json,.json" hidden>
+        <button class="btn wide" id="resetCfg" type="button">Значения по умолчанию</button>
+        <div class="hint">
+          Проверка вычислительного ядра: <a href="tests/" target="_blank" rel="noopener">самотест</a>.<br>
+          Сверка с эталонной моделью на Python/NumPy: <a href="reference/" target="_blank" rel="noopener">открыть</a>.
+        </div>
+      </div>
+    </details>
+  </aside>
+
+  <main class="main" id="main">
+    <nav class="tabs" role="tablist">
+      <button type="button" role="tab" data-tab="stand">Измерительный стенд</button>
+      <button type="button" role="tab" data-tab="mc">Бюджет неопределённости</button>
+      <button type="button" role="tab" data-tab="methods">Методы измерения фазы</button>
+      <button type="button" role="tab" data-tab="array">Применение в ФАР</button>
+    </nav>
+
+    <div class="banner" id="banner" hidden></div>
+
+    <!-- Вкладка 1. Измерительный стенд -->
+    <section class="tab" data-panel="stand">
+      <section class="card">
+        <div class="card-head">
+          <h2>Результаты измерения в рабочей полосе</h2>
+          <span class="status" id="standInfo"></span>
+          <span class="spacer"></span>
+          <span class="verdict" id="verdict"></span>
+        </div>
+        <div class="table-wrap">
+          <table class="results">
+            <thead>
+              <tr>
+                <th>Параметр</th><th>Измерено</th><th>Истинное</th><th>Погрешность</th>
+                <th>Норма</th><th>Заключение</th><th>По истинному</th>
+              </tr>
+            </thead>
+            <tbody id="resultsBody"></tbody>
+          </table>
+        </div>
+        <div class="decision" id="decision" hidden></div>
+      </section>
+
+      <div class="tiles" id="accTiles"></div>
+
+      <details class="card fold">
+        <summary>Структурная схема измерительной системы</summary>
+        <div class="scheme" id="scheme"></div>
+      </details>
+
+      <details class="card fold">
+        <summary>Разряды фазовращателя: схемы, расчётные номиналы, фазовые сдвиги на частоте анализа</summary>
+        <div class="table-wrap">
+          <table class="results">
+            <thead>
+              <tr><th>Разряд</th><th>Схема</th><th>Номиналы экземпляра</th><th>Измерено</th><th>Истинное</th><th>Ошибка</th><th>Потери</th></tr>
+            </thead>
+            <tbody id="bitsBody"></tbody>
+          </table>
+        </div>
+      </details>
+
+      <div class="chips" id="chips"></div>
+      <div class="plots" id="standPlots"></div>
+    </section>
+
+    <!-- Вкладка 2. Бюджет неопределённости -->
+    <section class="tab" data-panel="mc" hidden>
+      <section class="card">
+        <div class="card-head">
+          <h2>Бюджет неопределённости измерения фазы и потерь</h2>
+          <span class="status" id="mcInfo"></span>
+          <span class="spacer"></span>
+          <button class="btn btn-primary" id="mcRun" type="button">Запустить моделирование</button>
+        </div>
+        <div class="progress" id="mcProgress" hidden><div></div></div>
+        <div class="stale" id="mcStale" hidden>Параметры изменены после последнего расчёта — запустите моделирование заново.</div>
+        <div class="table-wrap">
+          <table class="results">
+            <thead>
+              <tr><th>Источник погрешности</th><th>u(φ), °</th><th>Доля дисперсии</th><th>u(потерь), дБ</th><th>Систематическая часть φ, °</th></tr>
+            </thead>
+            <tbody id="mcBody"></tbody>
+          </table>
+        </div>
+      </section>
+      <div class="plots" id="mcPlots"></div>
+    </section>
+
+    <!-- Вкладка 3. Методы -->
+    <section class="tab" data-panel="methods" hidden>
+      <section class="card">
+        <div class="card-head">
+          <h2>Сравнение методов измерения разности фаз</h2>
+          <span class="status" id="methodsInfo"></span>
+          <span class="spacer"></span>
+          <button class="btn btn-primary" id="methodsRun" type="button">Выполнить эксперимент</button>
+        </div>
+        <div class="progress" id="methodsProgress" hidden><div></div></div>
+        <div class="stale" id="methodsStale" hidden>Параметры изменены после последнего расчёта — выполните эксперимент заново.</div>
+        <div class="table-wrap">
+          <table class="results">
+            <thead>
+              <tr><th>Метод</th><th>СКП, °</th><th>Смещение, °</th><th>СКО, °</th><th>СКП / граница К-Р</th><th>Макс. систем. погрешность, °</th><th>Однозначность</th></tr>
+            </thead>
+            <tbody id="methodsBody"></tbody>
+          </table>
+        </div>
+      </section>
+      <div class="plots" id="methodsPlots"></div>
+    </section>
+
+    <!-- Вкладка 4. ФАР -->
+    <section class="tab" data-panel="array" hidden>
+      <section class="card">
+        <div class="card-head">
+          <h2>Влияние фазовых ошибок на диаграмму направленности</h2>
+          <span class="status" id="arrayInfo"></span>
+        </div>
+        <div class="table-wrap">
+          <table class="results">
+            <thead>
+              <tr><th>Вариант</th><th>Направление максимума</th><th>Ошибка наведения</th><th>Изменение усиления</th><th>УБЛ</th><th>СКО фазы</th><th>СКО амплитуды</th></tr>
+            </thead>
+            <tbody id="arrayBody"></tbody>
+          </table>
+        </div>
+      </section>
+      <div class="plots" id="arrayPlots"></div>
+    </section>
+  </main>
+</div>
+
+<div class="tooltip" id="tooltip" hidden></div>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

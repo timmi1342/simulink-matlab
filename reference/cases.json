@@ -1,0 +1,36 @@
+{
+  "description": "Режимы сверки веб-версии с эталонной моделью. defaults совпадает с defaultParams() из js/params.js, patch накладывается поверх.",
+  "defaults": {
+    "dut": { "bits": 6, "topology": "mixed", "f0": 10000000000, "ron": 3, "coffFf": 20, "qL": 30, "qC": 80, "lineLossDb": 0.5, "tolPct": 1.5, "instance": 1 },
+    "sys": {
+      "powerDbm": -10, "nfDb": 30, "ifbwHz": 1000, "recordLen": 128, "adcBits": 14, "headroomDb": 3, "cal": "full",
+      "res": { "esfDb": -38, "elfDb": -40, "edfDb": -45, "exfDb": -100, "trackDb": 0.02, "trackDeg": 0.2 },
+      "raw": { "esfDb": -16, "elfDb": -18, "edfDb": -25, "exfDb": -80, "cableLossDb": 3, "cableDelayNs": 2.5 },
+      "driftDegMin": 0.02, "driftDbMin": 0.001, "strategy": "sequential", "settleUs": 20, "switchMs": 1,
+      "sources": { "noise": true, "quant": true, "mismatch": true, "leakage": true, "tracking": true, "drift": true },
+      "seed": 1
+    },
+    "sweep": { "start": 7000000000, "stop": 13000000000, "points": 61, "bandLo": 9500000000, "bandHi": 10500000000, "analysisHz": 10000000000, "scopeState": 21, "polarGain": 2 },
+    "limits": { "rmsPhaseDeg": 5, "peakPhaseDeg": 10, "rmsAmpDb": 0.5, "ilMaxDb": 4, "vswrMax": 1.8 },
+    "mc": { "runs": 100, "freqPoints": 5 },
+    "methods": {
+      "recordLen": 256, "cycles": 16, "snrMin": 0, "snrMax": 60, "snrStep": 5, "trials": 300, "ratioDb": -6, "deltaDeg": 50,
+      "adcBits": 12, "harmonicOn": true, "harmonicDbc": -40, "harmonicOrder": 3, "iqGainDb": 0.3, "iqPhaseDeg": 1.5,
+      "spErrDeg": 1.5, "spComp": 0.02, "window": "rect", "biasSnrDb": 40, "tableSnrDb": 30, "seed": 7
+    },
+    "array": { "elements": 16, "spacing": 0.5, "steerDeg": 25, "freqHz": 10500000000, "taper": "cospd", "pedestal": 0.3 }
+  },
+  "cases": [
+    { "name": "typical", "title": "Типовой режим, полная калибровка", "patch": { "sweep": { "points": 21 } } },
+    { "name": "nocal", "title": "Без калибровки", "patch": { "sweep": { "points": 21 }, "sys": { "cal": "none" } } },
+    { "name": "response", "title": "Нормировка по перемычке", "patch": { "sweep": { "points": 21 }, "sys": { "cal": "response" } } },
+    { "name": "lowpower", "title": "Мощность −70 дБм, полоса ПЧ 10 кГц", "patch": { "sweep": { "points": 21 }, "sys": { "powerDbm": -70, "ifbwHz": 10000 } } },
+    { "name": "drift_seq", "title": "Дрейф 0,1 °/мин, последовательное измерение", "patch": { "sweep": { "points": 21 }, "sys": { "ifbwHz": 10, "driftDegMin": 0.1 } } },
+    { "name": "drift_int", "title": "Дрейф 0,1 °/мин, повторное опорное измерение", "patch": { "sweep": { "points": 21 }, "sys": { "ifbwHz": 10, "driftDegMin": 0.1, "strategy": "interleaved" } } },
+    { "name": "switched4", "title": "4 разряда на переключаемых линиях", "patch": { "sweep": { "points": 21 }, "dut": { "bits": 4, "topology": "switched" } } },
+    { "name": "hplp5", "title": "5 разрядов на ФВЧ/ФНЧ", "patch": { "sweep": { "points": 21 }, "dut": { "bits": 5, "topology": "hplp" } } },
+    { "name": "adc8", "title": "АЦП 8 разрядов, запись 64 отсчёта", "patch": { "sweep": { "points": 21 }, "sys": { "adcBits": 8, "recordLen": 64 } } },
+    { "name": "instance7", "title": "Экземпляр 7, разброс 3 %", "patch": { "sweep": { "points": 21 }, "dut": { "instance": 7, "tolPct": 3 } } },
+    { "name": "ideal", "title": "Все источники погрешности отключены", "patch": { "sweep": { "points": 21 }, "sys": { "sources": { "noise": false, "quant": false, "mismatch": false, "leakage": false, "tracking": false, "drift": false } } } }
+  ]
+}

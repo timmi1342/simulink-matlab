@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Самотест вычислительного ядра</title>
+<style>
+  :root { color-scheme: light dark; --bg: #fcfcfb; --text: #0b0b0b; --muted: #52514e; --line: #e1e0d9; --ok: #006300; --fail: #b42323; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #1a1a19; --text: #fff; --muted: #c3c2b7; --line: #2c2c2a; --ok: #0ca30c; --fail: #e66767; } }
+  body { margin: 0; padding: 24px 16px; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 18px; margin: 0 0 6px; }
+  #summary { margin: 8px 0 16px; font-size: 15px; font-weight: 600; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  td, th { padding: 6px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+  th { color: var(--muted); font-size: 12px; }
+  .ok { color: var(--ok); font-weight: 700; white-space: nowrap; }
+  .fail { color: var(--fail); font-weight: 700; white-space: nowrap; }
+  .detail { color: var(--muted); font-variant-numeric: tabular-nums; }
+  a { color: #2a78d6; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Самотест вычислительного ядра PhaseShifter Lab</h1>
+  <div class="detail">Каждая проверка сравнивает результат программы с аналитическим соотношением. <a href="../">Вернуться к программе</a> · <a href="../reference/">сверка с эталонной моделью на Python</a></div>
+  <div id="summary">Выполняется…</div>
+  <table>
+    <thead><tr><th>Итог</th><th>Раздел</th><th>Проверка</th><th>Подробности</th></tr></thead>
+    <tbody id="out"></tbody>
+  </table>
+</main>
+<script type="module">
+  import { run } from './selftest.js';
+  const t0 = performance.now();
+  const rows = await run();
+  const out = document.getElementById('out');
+  let passed = 0;
+  for (const r of rows) {
+    if (r.pass) passed++;
+    const tr = document.createElement('tr');
+    for (const [text, cls] of [[r.pass ? '✓ ОК' : '✕ ОШИБКА', r.pass ? 'ok' : 'fail'], [r.group, ''], [r.name, ''], [r.detail, 'detail']]) {
+      const td = document.createElement('td');
+      td.textContent = text;
+      if (cls) td.className = cls;
+      tr.appendChild(td);
+    }
+    out.appendChild(tr);
+  }
+  const summary = `Пройдено ${passed} из ${rows.length} за ${((performance.now() - t0) / 1000).toFixed(1)} с`;
+  document.getElementById('summary').textContent = summary;
+  console.log('SELFTEST', summary);
+  for (const r of rows) if (!r.pass) console.error('FAIL:', r.group, r.name, r.detail);
+  window.__selftest = { passed, total: rows.length, rows };
+</script>
+</body>
+</html>
